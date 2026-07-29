@@ -1,9 +1,11 @@
 use crate::config::Config;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use lettre::message::MessageBuilder;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{SmtpTransport, Transport};
 use log::{error, info, warn};
+use std::sync::Arc;
+use tokio::{spawn, task};
 
 pub fn create_mailer(config: &Config) -> Option<SmtpTransport> {
     let host = config.smtp_host.as_ref()?;
@@ -20,6 +22,7 @@ pub fn create_mailer(config: &Config) -> Option<SmtpTransport> {
     } else {
         SmtpTransport::relay(host).ok()?.credentials(creds).build()
     };
+    /*只在启动时初始化所以并不考虑异步处理*/
     match mailer.test_connection() {
         Ok(yes) if yes => {
             info!("smtp Server connction success!");
@@ -36,16 +39,21 @@ pub fn create_mailer(config: &Config) -> Option<SmtpTransport> {
     Some(mailer)
 }
 
-pub fn send_email(
-    username: &str,
+pub async fn send_email(
+    username: String,
     message: String,
     to_: String,
-    mailer: &SmtpTransport,
+    mailer: Arc<SmtpTransport>,
 ) -> Result<()> {
     let mail = MessageBuilder::new()
         .from(username.parse()?)
         .to(to_.parse()?)
         .body(message)?;
-    mailer.send(&mail)?;
+
+    // 将发送逻辑丢进阻塞任务线程池中
+    task::spawn_blocking(move || mailer.send(&mail))
+        .await?
+        .map_err(|e| anyhow!("Failed to send email: {}", e))?;
+
     Ok(())
 }
