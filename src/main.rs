@@ -5,6 +5,7 @@ mod dntype;
 pub mod mailer;
 mod middleware;
 pub mod resp;
+pub mod verify;
 
 use actix_cors::Cors;
 use actix_web::web::Data;

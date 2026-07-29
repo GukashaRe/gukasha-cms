@@ -5,7 +5,7 @@ use lettre::transport::smtp::authentication::Credentials;
 use lettre::{SmtpTransport, Transport};
 use log::{error, info, warn};
 use std::sync::Arc;
-use tokio::{spawn, task};
+use tokio::task;
 
 pub fn create_mailer(config: &Config) -> Option<SmtpTransport> {
     let host = config.smtp_host.as_ref()?;
