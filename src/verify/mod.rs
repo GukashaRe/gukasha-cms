@@ -1,5 +1,6 @@
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
+use log::debug;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -24,8 +25,10 @@ pub fn verify_code(email: &str, code: &str) -> Result<bool> {
     let entry = map.get(email).cloned();
     if let Some((cached_code, expiry)) = entry {
         let success = cached_code == code && Utc::now() < expiry;
-        map.remove(email);
+        let u = map.remove(email);
         if success {
+            debug!("e-mail {} verify success,used origin data = {:?}", email, u);
+            drop(u);
             return Ok(true);
         }
     }
